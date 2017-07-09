@@ -15,18 +15,14 @@ import json
 
 from optparse import OptionParser
 
+# Gmail credentials file path
+CREDENTIALS_PATH = "./creds.data"
+
 # The URL root for accessing Google Accounts.
 GOOGLE_ACCOUNTS_BASE_URL = 'https://accounts.google.com'
 
 # Hardcoded dummy redirect URI for non-web apps.
 REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
-
-EMAILUSER= "username@gmail.com" 
-EMAILPASSWORD= "password"
-
-#Register with Google to obtain CLIENTID and CLIENTTOKEN
-CLIENTID=  "client-id"
-CLIENTTOKEN= "client-secret" 
 
 #SCOPE= 'https://www.googleapis.com/auth/gmail.readonly'  
 SCOPE= 'https://mail.google.com/'
@@ -37,14 +33,20 @@ class ClientExtractor:
     def __init__(self):
         self.auth_string= ""
 
+    def InitializeCredentials(self):
+        credentials = MiscTools.GetGmailCreds(CREDENTIALS_PATH)
+        self.username = credentials['USERNAME']
+        self.client_id = credentials['CLIENTID']
+        self.client_token = credentials['CLIENTTOKEN']
+
     def GetRawClientList(self):
         if self.auth_string ==  "":
             print 'To authorize token, visit this url and follow the directions:'
-            print '  %s' % OAuth2Tools.GeneratePermissionUrl(CLIENTID, SCOPE)
+            print '  %s' % OAuth2Tools.GeneratePermissionUrl(self.cliend_id, SCOPE)
             authorization_code = raw_input('Enter verification code: ')
-            auth_tokens= OAuth2Tools.AuthorizeTokens(CLIENTID, CLIENTTOKEN, authorization_code)
-            self.auth_string= OAuth2Tools.GenerateOAuth2String(EMAILUSER, auth_tokens['access_token'], base64_encode=False)
-        latestRawEmail= EmailTools.GetLatestEmail(EMAILUSER,  self.auth_string)
+            auth_tokens= OAuth2Tools.AuthorizeTokens(self.client_id, self.client_token, authorization_code)
+            self.auth_string= OAuth2Tools.GenerateOAuth2String(self.username, auth_tokens['access_token'], base64_encode=False)
+        latestRawEmail= EmailTools.GetLatestEmail(self.username,  self.auth_string)
         latestEmail= EmailTools.ConvertRawToEmailMessage(latestRawEmail)
         emailData= EmailTools.ConvertEmailMessageToData(latestEmail, 0)
         dataList = DataTools.BreakDataStringToDataList(emailData)
@@ -56,6 +58,19 @@ class DataTools:
         dataList = re.split('[0-9][0-9][0-9][0-9]\-[0-9][0-9][0-9][0-9]', dataString)
         return dataList
 
+class MiscTools:
+    
+    @staticmethod
+    def GetGmailCreds(path_to_data_file):
+        credentials = {}
+        with open(path_to_data_file, 'r') as credsFile:
+            for line in credsFile:
+                (key, val) = line.split('=')
+                key = key.replace(" ","")
+                val = val.replace("\n","")
+                val = val.replace(" ","")
+                credentials[key] = val
+        return credentials
 
 class EmailTools:
 
@@ -253,16 +268,3 @@ class OAuth2Tools:
         print
         smtp_conn = smtplib.SMTP('smtp.gmail.com', 587)
         smtp_conn.set_debuglevel(True)
-        smtp_conn.ehlo('test')
-        smtp_conn.starttls()
-        smtp_conn.docmd('AUTH', 'XOAUTH2 ' + base64.b64encode(auth_string))
-
-
-'''
-def main(argv):
-    clientExtractor = ClientExtractor()
-    clientList= clientExtractor.GetClientList()
-
-if __name__ == '__main__':
-    main(sys.argv)
-'''

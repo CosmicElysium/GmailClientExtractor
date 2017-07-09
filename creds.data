@@ -1,0 +1,3 @@
+USERNAME    =  [insert gmail username here]  
+CLIENTID    =  [insert client id # after registering with Google API] 
+CLIENTTOKEN =  [insert client secret # after registering with Google API]
