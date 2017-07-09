@@ -12,11 +12,13 @@ import lxml
 import sys
 import urllib
 import json
+import re
+import time
 
 from optparse import OptionParser
 
 # Gmail credentials file path
-CREDENTIALS_PATH = "./creds.data"
+CREDENTIALS_PATH = "./creds_filled.data"
 
 # The URL root for accessing Google Accounts.
 GOOGLE_ACCOUNTS_BASE_URL = 'https://accounts.google.com'
@@ -29,9 +31,20 @@ SCOPE= 'https://mail.google.com/'
 
 ENDOFHEADER= "Number\r\n"
 
+class Client
+    
+    def setDateLastUpdated:
+        pass
+
+    def setDateCreated:
+        pass
+
+
+
 class ClientExtractor:
     def __init__(self):
         self.auth_string= ""
+        self.clientSet = []
 
     def InitializeCredentials(self):
         credentials = MiscTools.GetGmailCreds(CREDENTIALS_PATH)
@@ -42,20 +55,28 @@ class ClientExtractor:
     def GetRawClientList(self):
         if self.auth_string ==  "":
             print 'To authorize token, visit this url and follow the directions:'
-            print '  %s' % OAuth2Tools.GeneratePermissionUrl(self.cliend_id, SCOPE)
+            print '  %s' % OAuth2Tools.GeneratePermissionUrl(self.client_id, SCOPE)
             authorization_code = raw_input('Enter verification code: ')
             auth_tokens= OAuth2Tools.AuthorizeTokens(self.client_id, self.client_token, authorization_code)
             self.auth_string= OAuth2Tools.GenerateOAuth2String(self.username, auth_tokens['access_token'], base64_encode=False)
         latestRawEmail= EmailTools.GetLatestEmail(self.username,  self.auth_string)
         latestEmail= EmailTools.ConvertRawToEmailMessage(latestRawEmail)
         emailData= EmailTools.ConvertEmailMessageToData(latestEmail, 0)
-        dataList = DataTools.BreakDataStringToDataList(emailData)
+        self.dataList = DataTools.BreakDataStringToDataList(emailData)
+
+    def ConvertListToClients
+        for eachStudent in self.dataList:
+            entryDates = re.search('([0-9][0-9]\/[0-9][0-9]\/[0-9][0-9][0-9][0-9]).*?([0-9][0-9]\/[0-9][0-9]\/[0-9][0-9][0-9][0-9])', eachStudent)
+            dateUpdated = entryDates.group(1)
+            dateCreated = entryDates.group(2)
+            
+
 
 class DataTools:
 
     @staticmethod
     def BreakDataStringToDataList(dataString):
-        dataList = re.split('[0-9][0-9][0-9][0-9]\-[0-9][0-9][0-9][0-9]', dataString)
+        dataList = re.split('[0-9][0-9][0-9][0-9][0-9][0-9]\-[0-9][0-9][0-9][0-9][0-9][0-9]', dataString)
         return dataList
 
 class MiscTools:
@@ -96,8 +117,9 @@ class EmailTools:
 	emailPayload= email_message.get_payload(payload_index)
         dataDecodeable= emailPayload.get_payload(decode= True)
         dataDecoded= dataDecodeable.decode('utf-8')
-        startDataIndex= dataDecoded.find(ENDOFHEADER)
-        return dataDecoded[(startDataIndex + len(ENDOFHEADER)):]
+        return dataDecoded
+        #startDataIndex= dataDecoded.find(ENDOFHEADER)
+        #return dataDecoded[(startDataIndex + len(ENDOFHEADER)):]
 
 
 
