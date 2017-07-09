@@ -1,3 +1,11 @@
+'''
+
+Note: This module uses source code provided by Google Inc.
+The original oauth2.py script can be found at:
+    https://github.com/google/gmail-oauth2-tools/blob/master/python/oauth2.py
+
+'''
+
 import imaplib
 import email
 import lxml
