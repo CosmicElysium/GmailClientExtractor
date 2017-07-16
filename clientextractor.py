@@ -14,6 +14,9 @@ import urllib
 import json
 import re
 import datetime
+import xlsxwriter
+
+from os import listdir
 
 import calendar
 from pandas import read_html
@@ -36,6 +39,8 @@ ENDOFHEADER= "Number\r\n"
 
 MONTH_ABBR_NUMBERS = {v + ".": k for k,v in enumerate(calendar.month_abbr)}
 MONTH_NUMBERS = {v: k for k,v in enumerate(calendar.month_name)}
+MONTH_NUMBERS_INVERSE = {k: v for k,v in enumerate(calendar.month_name)}
+MONTH_ABBR_NUMBERS_INVERSE = {k: v for k,v in enumerate(calendar.month_abbr)}
 
 
 CURRENTYEAR = 2017
@@ -43,7 +48,7 @@ CURRENTYEAR = 2017
 class Client:
     
     def __init__(self, ref_number, update_datetime, created_datetime, firstName, 
-            lastName, email, airlines, flight_number, origin, arrival_datetime ):
+            lastName, email, airlines, flight_number, origin, arrival_datetime, arrival_weekday ):
         self.ref_number= ref_number
         self.update_datetime= update_datetime
         self.created_datetime= created_datetime
@@ -54,6 +59,13 @@ class Client:
         self.flight_number= flight_number
         self.origin= origin
         self.arrival_datetime= arrival_datetime
+        self.arrival_weekday= arrival_weekday
+
+    
+    def GetDataSetAsList():
+        return [self.firstName, self.lastName, self.flight_number, self.arrival_weekday,  self.getArrivalDateAsString(),
+                                self.getArrivalTimeAsString, "TODO", "TODO", "TODO", "TODO"]
+
 
     def setDateTimeLastUpdated(self, year, month, day, hour, minute):
         self.dateTimeUpdated = datetime.datetime(year, month, day, hour, minute)
@@ -70,12 +82,23 @@ class Client:
     def setLastName(self, lastName):
         self.lastName = lastName
 
+    def getArrivalDateAsString(self):
+        return self.arrival_datetime.day + " " + MONTH_ABBR_NUMBERS_INVERSE[self.arrival_datetime.day] + " " + self.arrival_datetime.year 
+
+    def getArrivalTimeAsString(self):
+        return self.arrival_datetime.hour + ":" + self.arrival_datetime.minute
 
 class ClientExtractor:
     def __init__(self):
         self.auth_string= ""
         self.clientSet = []
 
+    def ExecuteSequence(self):
+        self.InitializeCredentials()
+        self.GetRawClientList()
+        self.ConvertListToClients()
+        self.WriteSpreadsheet()
+    
     def InitializeCredentials(self):
         credentials = MiscTools.GetGmailCreds(CREDENTIALS_PATH)
         self.username = credentials['USERNAME']
@@ -105,9 +128,33 @@ class ClientExtractor:
 
         dateToGet = datetime.date(CURRENTYEAR, month, day)
         
+        self.dateFound = dateToGet
+
         self.clientSet = DataTools.HtmlStringToClientList(self.dataList, dateToGet)
 
+    def WriteSpreadsheet(self):
+        updateNumber = 1
+        filePrefix = 'students_' + self.dateFound.day + MONTH_NUMBERS_INVERSE[self.dateFound.month] + '_update' 
+        directoryFileList = listdir("./spreadsheets")
+        for eachFile in directoryFileList:
+            if filePrefix in eachFile:
+                updateNumber++
+        workbook = xlsxwriter.Workbook( filePrefix  + updateNumber  + '.xlsx')
+        worksheet = workbook.add_worksheet()
+        headers = ["First name", "Family name", "Airline Flight No.", "Arrival day Arrival Date",
+                "Arrival time (est.)", "Extra passengers", "Drop-off (University Residence)", 
+                "Drop-off Address (other)", "Suburb"]
+        numberClients = len(clientSet)
+        for col,eachHeader in enumerate(headers):
+            worksheet.write(0, col, eachHeader)
+        for row, eachClient in enumerate(self.clientSet):
+            for col, eachData in enumerate(eachClient.GetDataSetAsList())
+                worksheet.write(row + 1, col, eachData)
+        workbook.close()
 
+
+    #check if flightnumbers match flights
+    #highlight updates
 class DataTools:
 
     @staticmethod
@@ -132,7 +179,7 @@ class DataTools:
                     pickUpDateTime = datetime.datetime(pickUpDateObject.year, pickUpDateObject.month, pickUpDateObject.day, pickUpTime.hour, pickUpTime.minute)
                     newClient = Client(currentClient[1], MiscTools.DateTimeStringToDateTimeObjects(currentClient[2]),
                             MiscTools.DateTimeStringToDateTimeObjects(currentClient[3]), currentClient[4], currentClient[5],
-                            currentClient[6], currentClient[12], currentClient[13], currentClient[14], pickUpDateTime)
+                            currentClient[6], currentClient[12], currentClient[13], currentClient[14], pickUpDateTime, currentClient[15])
                     clientList.append(newClient)
             return clientList
 
